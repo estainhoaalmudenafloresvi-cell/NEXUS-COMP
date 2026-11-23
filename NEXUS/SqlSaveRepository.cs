@@ -63,6 +63,17 @@ public sealed class SqlSaveRepository
         using var connection = Open();
     }
 
+    /// <summary>
+    /// Compatibilidad con la interfaz de Windows Forms: obtiene o crea el perfil
+    /// del explorador y guarda la partida completa en las cinco tablas.
+    /// </summary>
+    public int Guardar(GameState state)
+    {
+        ArgumentNullException.ThrowIfNull(state);
+        var perfil = ObtenerOCrearPerfil(state.Nombre);
+        return GuardarPartida(perfil.IdPerfil, state);
+    }
+
     // ───────────────────────── PERFILES ─────────────────────────
 
     public List<PerfilInfo> ListarPerfiles()
