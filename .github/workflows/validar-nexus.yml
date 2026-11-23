@@ -1,0 +1,28 @@
+name: Compilar NEXUS
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "NEXUS/**"
+      - "NEXUS.sln"
+      - ".github/workflows/validar-nexus.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - name: Descargar código
+        uses: actions/checkout@v4
+      - name: Configurar .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+      - name: Restaurar dependencias
+        run: dotnet restore NEXUS.sln
+      - name: Compilar solución
+        run: dotnet build NEXUS.sln --configuration Release --no-restore
