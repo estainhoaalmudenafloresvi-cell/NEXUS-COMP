@@ -630,11 +630,11 @@ public sealed class MainForm : Form
         try
         {
             sqlRepo.Guardar(game.S);
-            MessageBox.Show("¡Partida guardada correctamente en SQL Server (dbo.Partidas)!", "NEXUS · SQL Server");
+            MessageBox.Show("¡Partida guardada correctamente en SQL Server (perfil, partida, progreso y mejoras)!", "NEXUS · SQL Server");
         }
         catch (Exception ex)
         {
-            MessageBox.Show("No se pudo conectar a SQL Server (ejecuta SQL/CrearBaseNEXUS.sql primero):\n" + ex.Message, "NEXUS · SQL Server");
+            MessageBox.Show("No se pudo guardar en SQL Server (ejecuta SQL/CrearBaseNEXUS.sql primero):\n" + ex.Message, "NEXUS · SQL Server");
         }
     }
 
