@@ -24,7 +24,7 @@ jobs:
           set -euo pipefail
           cp SqlSaveRepository.cs /tmp/SqlSaveRepository.latest.cs
           git clone --depth 1 https://github.com/estainhoaalmudenafloresvi-cell/NEXUS-V2.git /tmp/NEXUS-V2
-          rsync -a --exclude='.git' /tmp/NEXUS-V2/ ./
+          rsync -a --exclude='.git' --exclude='.github/workflows/***' /tmp/NEXUS-V2/ ./
           cp /tmp/SqlSaveRepository.latest.cs SqlSaveRepository.cs
           rm -f prueba.txt
           git config user.name "github-actions[bot]"
