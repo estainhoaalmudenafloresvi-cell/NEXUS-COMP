@@ -1,0 +1,5 @@
+PRUEBA DE ESCRITURA EN GITHUB
+
+Este archivo fue creado como prueba para verificar que se pueden subir archivos al repositorio mediante ChatGPT.
+
+Fecha: 23/11/2026
