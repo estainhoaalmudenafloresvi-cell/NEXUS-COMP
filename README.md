@@ -16,7 +16,7 @@
   <img src="https://img.shields.io/badge/Status-In%20development-4A9FC2?style=for-the-badge" alt="En desarrollo">
 </p>
 
-NEXUS es una aventura espacial en la que una exploradora debe recorrer cuatro planetas, cumplir objetivos, reunir recursos y mejorar su equipo. El repositorio conserva el proyecto original de consola H3 y la evolución gráfica actual.
+NEXUS es una aventura espacial en la que una exploradora debe recorrer cuatro planetas, cumplir objetivos, reunir recursos y mejorar su equipo. Este repositorio contiene la versión gráfica actual del videojuego y sus recursos, documentación y script de persistencia.
 
 ---
 
