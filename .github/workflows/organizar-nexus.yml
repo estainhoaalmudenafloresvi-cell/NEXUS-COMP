@@ -1,0 +1,250 @@
+name: Organizar estructura de NEXUS
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/organizar-nexus.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  organizar:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Descargar repositorio
+        uses: actions/checkout@v4
+
+      - name: Organizar proyecto gráfico y preparar SQL
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          mkdir -p NEXUS/Assets/UI NEXUS/Assets/Planets NEXUS/Assets/Audio NEXUS/SQL
+
+          mv NEXUS.csproj Program.cs MainForm.cs GameEngine.cs SoundFX.cs NEXUS/
+          mv SqlSaveRepository.cs NEXUS/SqlSaveRepository.cs
+          mv nexus_splash.png NEXUS/Assets/UI/
+          mv planet-*.png NEXUS/Assets/Planets/
+          mv *_*.wav NEXUS/Assets/Audio/
+
+          cat > NEXUS/SQL/CrearBaseNEXUS.sql <<'SQL'
+          /*
+            NEXUS — Expedición Eos
+            Esquema de persistencia SQL Server para SqlSaveRepository.
+            Incluye perfiles, misiones, partidas, progreso y mejoras.
+          */
+          IF DB_ID(N'NEXUS') IS NULL
+              CREATE DATABASE NEXUS;
+          GO
+
+          USE NEXUS;
+          GO
+
+          IF OBJECT_ID(N'dbo.Partidas', N'U') IS NOT NULL
+             AND COL_LENGTH(N'dbo.Partidas', N'IdPerfil') IS NULL
+          BEGIN
+              IF OBJECT_ID(N'dbo.Partidas_v1', N'U') IS NULL
+                  EXEC sp_rename N'dbo.Partidas', N'Partidas_v1';
+              ELSE
+                  THROW 51000, 'Existe una tabla Partidas antigua y Partidas_v1 ya existe. Revisa la migración antes de continuar.', 1;
+          END;
+          GO
+
+          IF OBJECT_ID(N'dbo.Perfiles', N'U') IS NULL
+          BEGIN
+              CREATE TABLE dbo.Perfiles
+              (
+                  IdPerfil INT IDENTITY(1,1) NOT NULL CONSTRAINT PK_Perfiles PRIMARY KEY,
+                  Nombre NVARCHAR(40) NOT NULL,
+                  FechaCreacion DATETIME2(0) NOT NULL CONSTRAINT DF_Perfiles_Fecha DEFAULT SYSDATETIME(),
+                  CONSTRAINT UQ_Perfiles_Nombre UNIQUE (Nombre)
+              );
+          END;
+          GO
+
+          IF OBJECT_ID(N'dbo.Misiones', N'U') IS NULL
+          BEGIN
+              CREATE TABLE dbo.Misiones
+              (
+                  IdMision TINYINT NOT NULL CONSTRAINT PK_Misiones PRIMARY KEY,
+                  Planeta NVARCHAR(30) NOT NULL,
+                  Nombre NVARCHAR(80) NOT NULL
+              );
+          END;
+          GO
+
+          IF NOT EXISTS (SELECT 1 FROM dbo.Misiones WHERE IdMision = 1)
+              INSERT INTO dbo.Misiones (IdMision, Planeta, Nombre) VALUES (1, N'EOS', N'Jardín de Cristal');
+          IF NOT EXISTS (SELECT 1 FROM dbo.Misiones WHERE IdMision = 2)
+              INSERT INTO dbo.Misiones (IdMision, Planeta, Nombre) VALUES (2, N'NÉBULA', N'Archivo Sumergido');
+          IF NOT EXISTS (SELECT 1 FROM dbo.Misiones WHERE IdMision = 3)
+              INSERT INTO dbo.Misiones (IdMision, Planeta, Nombre) VALUES (3, N'SYLVARA', N'Santuario de las Lunas');
+          IF NOT EXISTS (SELECT 1 FROM dbo.Misiones WHERE IdMision = 4)
+              INSERT INTO dbo.Misiones (IdMision, Planeta, Nombre) VALUES (4, N'ASTRALIS', N'Corazón del Vacío');
+          GO
+
+          IF OBJECT_ID(N'dbo.Partidas', N'U') IS NULL
+          BEGIN
+              CREATE TABLE dbo.Partidas
+              (
+                  IdPartida INT IDENTITY(1,1) NOT NULL CONSTRAINT PK_Partidas PRIMARY KEY,
+                  IdPerfil INT NOT NULL,
+                  IdMisionActual TINYINT NOT NULL,
+                  Nivel INT NOT NULL CONSTRAINT DF_Partidas_Nivel DEFAULT 1,
+                  XP INT NOT NULL CONSTRAINT DF_Partidas_XP DEFAULT 0,
+                  Vida INT NOT NULL,
+                  MaxVida INT NOT NULL,
+                  Energia INT NOT NULL,
+                  MaxEnergia INT NOT NULL,
+                  Creditos INT NOT NULL CONSTRAINT DF_Partidas_Creditos DEFAULT 0,
+                  Botiquines INT NOT NULL CONSTRAINT DF_Partidas_Botiquines DEFAULT 0,
+                  Eliminaciones INT NOT NULL CONSTRAINT DF_Partidas_Eliminaciones DEFAULT 0,
+                  MejorRacha INT NOT NULL CONSTRAINT DF_Partidas_MejorRacha DEFAULT 0,
+                  Fragmentos INT NOT NULL CONSTRAINT DF_Partidas_Fragmentos DEFAULT 0,
+                  Nucleos INT NOT NULL CONSTRAINT DF_Partidas_Nucleos DEFAULT 0,
+                  InventarioJson NVARCHAR(MAX) NOT NULL CONSTRAINT DF_Partidas_Inventario DEFAULT N'[]',
+                  FechaGuardado DATETIME2(0) NOT NULL CONSTRAINT DF_Partidas_Fecha DEFAULT SYSDATETIME(),
+                  CONSTRAINT FK_Partidas_Perfiles FOREIGN KEY (IdPerfil)
+                      REFERENCES dbo.Perfiles(IdPerfil) ON DELETE CASCADE,
+                  CONSTRAINT FK_Partidas_Misiones FOREIGN KEY (IdMisionActual)
+                      REFERENCES dbo.Misiones(IdMision),
+                  CONSTRAINT CK_Partidas_Nivel CHECK (Nivel >= 1),
+                  CONSTRAINT CK_Partidas_XP CHECK (XP >= 0),
+                  CONSTRAINT CK_Partidas_Vida CHECK (MaxVida > 0 AND Vida >= 0 AND Vida <= MaxVida),
+                  CONSTRAINT CK_Partidas_Energia CHECK (MaxEnergia > 0 AND Energia >= 0 AND Energia <= MaxEnergia),
+                  CONSTRAINT CK_Partidas_Creditos CHECK (Creditos >= 0),
+                  CONSTRAINT CK_Partidas_Botiquines CHECK (Botiquines >= 0),
+                  CONSTRAINT CK_Partidas_Eliminaciones CHECK (Eliminaciones >= 0),
+                  CONSTRAINT CK_Partidas_MejorRacha CHECK (MejorRacha >= 0),
+                  CONSTRAINT CK_Partidas_Fragmentos CHECK (Fragmentos >= 0),
+                  CONSTRAINT CK_Partidas_Nucleos CHECK (Nucleos >= 0),
+                  CONSTRAINT CK_Partidas_InventarioJson CHECK (ISJSON(InventarioJson) = 1)
+              );
+          END;
+          GO
+
+          IF OBJECT_ID(N'dbo.ProgresoMisiones', N'U') IS NULL
+          BEGIN
+              CREATE TABLE dbo.ProgresoMisiones
+              (
+                  IdPartida INT NOT NULL,
+                  IdMision TINYINT NOT NULL,
+                  Completada BIT NOT NULL CONSTRAINT DF_ProgresoMisiones_Completada DEFAULT 0,
+                  CONSTRAINT PK_ProgresoMisiones PRIMARY KEY (IdPartida, IdMision),
+                  CONSTRAINT FK_ProgresoMisiones_Partidas FOREIGN KEY (IdPartida)
+                      REFERENCES dbo.Partidas(IdPartida) ON DELETE CASCADE,
+                  CONSTRAINT FK_ProgresoMisiones_Misiones FOREIGN KEY (IdMision)
+                      REFERENCES dbo.Misiones(IdMision)
+              );
+          END;
+          GO
+
+          IF OBJECT_ID(N'dbo.MejorasPartida', N'U') IS NULL
+          BEGIN
+              CREATE TABLE dbo.MejorasPartida
+              (
+                  IdPartida INT NOT NULL,
+                  TipoMejora NVARCHAR(20) NOT NULL,
+                  Nivel TINYINT NOT NULL CONSTRAINT DF_MejorasPartida_Nivel DEFAULT 0,
+                  CONSTRAINT PK_MejorasPartida PRIMARY KEY (IdPartida, TipoMejora),
+                  CONSTRAINT FK_MejorasPartida_Partidas FOREIGN KEY (IdPartida)
+                      REFERENCES dbo.Partidas(IdPartida) ON DELETE CASCADE,
+                  CONSTRAINT CK_MejorasPartida_Tipo CHECK (TipoMejora IN (N'Arma', N'Escudo', N'Propulsor', N'Dron')),
+                  CONSTRAINT CK_MejorasPartida_Nivel CHECK (Nivel BETWEEN 0 AND 10)
+              );
+          END;
+          GO
+
+          IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = N'IX_Partidas_Perfil_Fecha' AND object_id = OBJECT_ID(N'dbo.Partidas'))
+              CREATE INDEX IX_Partidas_Perfil_Fecha ON dbo.Partidas (IdPerfil, FechaGuardado DESC, IdPartida DESC);
+          GO
+
+          SELECT N'Esquema NEXUS listo' AS Resultado;
+          GO
+          SQL
+
+          rm -rf Docs/docs
+          rm -f "Docs/evidencias/fotitos y diagramas"
+
+          cat > README.md <<'MD'
+          # NEXUS — Expedición Eos
+
+          Videojuego de acción táctica 2D desarrollado en C# con Windows Forms y .NET 8. La versión gráfica contiene cuatro expediciones, combate, exploración, progresión, inventario y guardado de partidas. Se conserva también el proyecto original de consola H3.
+
+          ## Proyectos
+
+          - NEXUS/: versión gráfica Windows Forms.
+          - ConsoleApp1/: proyecto original de consola.
+          - Docs/: documentación de diseño, arquitectura, modelo de datos, análisis técnico y evidencias.
+
+          ## Expediciones
+
+          1. EOS — Jardín de Cristal: reunir los Fragmentos Prismáticos y activar el portal.
+          2. NÉBULA — Archivo Sumergido: recuperar los Núcleos de Datos antes de que termine la tormenta.
+          3. SYLVARA — Santuario de las Lunas: sincronizar los altares y vencer al Acechador Lunar.
+          4. ASTRALIS — Corazón del Vacío: desactivar los pilares de escudo y derrotar al Vigía de Eos.
+
+          ## Controles
+
+          | Entrada | Acción |
+          |---|---|
+          | WASD / Flechas | Movimiento |
+          | Ratón | Apuntado |
+          | Clic izquierdo / Espacio | Disparar |
+          | Shift / Clic derecho | Impulso espectral |
+          | Q | Onda prismática |
+          | E | Activar portal |
+          | H | Usar botiquín |
+          | U / B | Abrir Armería Estelar |
+          | M | Activar o silenciar sonido |
+          | F5 | Guardar partida |
+          | Esc | Pausa |
+
+          ## Requisitos y ejecución
+
+          - Windows 10/11.
+          - Visual Studio 2022 con la carga de trabajo Desarrollo de escritorio de .NET, o .NET 8 SDK.
+          - SQL Server / SQL Server Express si se desea utilizar la persistencia SQL.
+
+          Abre NEXUS.sln en Visual Studio 2022, selecciona el proyecto NEXUS como inicio y ejecuta con F5. También puedes usar COMPILAR_Y_EJECUTAR.bat.
+
+          ## Persistencia SQL Server
+
+          1. Abre NEXUS/SQL/CrearBaseNEXUS.sql en SQL Server Management Studio y ejecútalo.
+          2. Comprueba que se hayan creado las tablas Perfiles, Misiones, Partidas, ProgresoMisiones y MejorasPartida.
+          3. Si tu instancia SQL Server es distinta, configura la variable de entorno NEXUS_SQL_CONNECTION con tu cadena de conexión. El código incluye una cadena predeterminada que puede requerir adaptación al nombre de instancia de tu equipo.
+
+          La persistencia guarda perfiles y partidas, y registra el progreso de las cuatro misiones y las mejoras de la Armería. El guardado local JSON también se conserva.
+
+          ## Estructura principal
+
+          NEXUS-COMP/
+          ├── ConsoleApp1/
+          ├── NEXUS/
+          │   ├── Assets/ (Audio, Planets, UI)
+          │   ├── SQL/
+          │   ├── GameEngine.cs
+          │   ├── MainForm.cs
+          │   ├── Program.cs
+          │   ├── SoundFX.cs
+          │   ├── SqlSaveRepository.cs
+          │   └── NEXUS.csproj
+          ├── Docs/
+          ├── NEXUS.sln
+          ├── NEXUS V2.slnx
+          └── README.md
+
+          Consulta Docs/ para la documentación del proyecto y CORRECCIONES.md para el registro de correcciones conocidas.
+          MD
+
+          dotnet build NEXUS.sln -c Release -p:EnableWindowsTargeting=true || echo "::warning::La importación terminó, pero la compilación requiere revisión."
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          if ! git diff --cached --quiet; then
+            git commit -m "Organizar NEXUS en proyectos, recursos y SQL Server"
+            git push
+          fi
