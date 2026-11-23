@@ -2,15 +2,11 @@
 
 ## 1. Objetivo
 
-Este documento describe las dos etapas presentes en el repositorio: el proyecto original de consola H3 y la versión gráfica actual. La finalidad es explicar cómo se pasó de la estructura inicial a una aplicación Windows Forms y qué responsabilidades tiene cada parte.
+Este documento describe la arquitectura de la versión gráfica actual de NEXUS, desarrollada con Windows Forms. El repositorio contiene únicamente esta versión del juego, sus recursos, documentación y archivos de persistencia.
 
 ## 2. Versiones y tecnologías
 
-### Proyecto original H3
-
-El proyecto ConsoleApp1 conserva el videojuego de consola desarrollado en C#. Su manual técnico describe las clases del cadete, personajes, mapa y sistema de juego, así como el guardado JSON.
-
-### Versión gráfica actual
+### Tecnologías
 
 El proyecto NEXUS utiliza:
 - C# y .NET 8 para Windows.
@@ -147,18 +143,15 @@ El guardado SQL se inicia desde la pausa. La opción Archivo y Base de Datos SQL
 8. El juego guarda localmente de forma periódica y bajo petición.
 9. Si la jugadora lo solicita, SqlSaveRepository guarda o recupera datos de SQL Server.
 
-## 6. Relación con H3
+## 6. Alcance de la versión actual
 
-El proyecto de consola se conserva en ConsoleApp1. La versión gráfica mantiene la idea de exploración, personaje, recursos, encuentros y progreso, pero su implementación actual utiliza GameState y GameEngine como estructura principal.
-
-No se debe afirmar que las clases antiguas de H3 se usan directamente en la versión gráfica si no están referenciadas desde el proyecto NEXUS. La relación entre ambas versiones es principalmente evolutiva y conceptual, además de conservar el código original en el repositorio.
+La versión incluida en este repositorio es el videojuego gráfico NEXUS para Windows. Mantiene la temática de exploración espacial, administración de recursos, encuentros y progreso, con una implementación propia basada en GameState y GameEngine. El código fuente de la versión de consola anterior no forma parte de este repositorio.
 
 ## 7. Limitaciones observadas
 
 - La conexión SQL depende de que exista una instancia disponible y de que la cadena de conexión sea correcta.
 - El guardado SQL se realiza desde una acción de la interfaz; el autoguardado periódico corresponde al archivo JSON local.
 - La interfaz no contiene una pantalla independiente para administrar el inventario, aunque el estado y la persistencia sí conservan la lista de objetos.
-- El archivo Manual_Tecnico_NEXUS_H3.md documenta la versión original de consola y debe leerse como referencia histórica, no como descripción de la interfaz gráfica actual.
 - La presencia del script SQL no demuestra por sí sola que la base esté instalada en todos los equipos; debe ejecutarse y probarse en cada instancia.
 
 ## 8. Archivos principales
@@ -171,4 +164,3 @@ No se debe afirmar que las clases antiguas de H3 se usan directamente en la vers
 | NEXUS/SqlSaveRepository.cs | Acceso a SQL Server |
 | NEXUS/SoundFX.cs | Audio |
 | NEXUS/SQL/CrearBaseNEXUS.sql | Creación del esquema SQL |
-| ConsoleApp1/Program.cs | Versión original de consola |
