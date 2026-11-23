@@ -1,28 +1,68 @@
-# NEXUS · Expedición Eos (Edición Galáctica Completa)
+# NEXUS — Expedición Eos
 
-Juego de acción táctica 2D en tiempo real desarrollado en **C# / Windows Forms (.NET 8)** con 4 planetas únicos, sistema de mejoras, radar táctico, partículas, audio sintetizado y persistencia dual (JSON + SQL Server).
+Videojuego de acción táctica 2D desarrollado en C# con Windows Forms y .NET 8. La versión gráfica contiene cuatro expediciones, combate, exploración, progresión, inventario y guardado de partidas. Se conserva también el proyecto original de consola H3.
 
-## Los 4 Planetas y sus Misiones
+## Proyectos
 
-1. **Planeta 1 — EOS · Jardín de Cristal:** Explora las geodas cristalinas, derrota a los Centinelas de Cristal, recupera los **3 Fragmentos Prismáticos** y activa el Portal al este (`E`).
-2. **Planeta 2 — NÉBULA · Archivo Sumergido:** Descarga los **4 Núcleos de Datos** antes de que la **Tormenta Iónica** agote la estabilidad de tu traje (recoge estabilizadores azules para ganar +26s).
-3. **Planeta 3 — SYLVARA · Santuario de las Lunas:** Sincroniza los **3 Altares Lunares** permaneciendo dentro de sus círculos de energía y derrota al sub-jefe **Acechador Lunar**.
-4. **Planeta 4 — ASTRALIS · Corazón del Vacío:** Destruye los **2 Pilares de Escudo** para desactivar la barrera del jefe final (**El Vigía de Eos**), derrótalo y cruza el portal final.
+- NEXUS/: versión gráfica Windows Forms.
+- ConsoleApp1/: proyecto original de consola.
+- Docs/: documentación de diseño, arquitectura, modelo de datos, análisis técnico y evidencias.
+
+## Expediciones
+
+1. EOS — Jardín de Cristal: reunir los Fragmentos Prismáticos y activar el portal.
+2. NÉBULA — Archivo Sumergido: recuperar los Núcleos de Datos antes de que termine la tormenta.
+3. SYLVARA — Santuario de las Lunas: sincronizar los altares y vencer al Acechador Lunar.
+4. ASTRALIS — Corazón del Vacío: desactivar los pilares de escudo y derrotar al Vigía de Eos.
 
 ## Controles
 
-- **WASD / Flechas:** Movimiento libre.
-- **Ratón:** Apuntado 360° independiente con mira láser.
-- **Clic Izquierdo / Espacio:** Disparar cañón prismático.
-- **Shift / Clic Derecho:** Impulso espectral (esquiva con invulnerabilidad).
-- **Q:** Onda prismática (repele enemigos y disipa proyectiles).
-- **E:** Activar el Portal de extracción cuando la misión esté lista.
-- **H:** Usar botiquín táctico.
-- **U / B:** Abrir la **Armería Estelar** (mejorar Cañón, Blindaje, Propulsores, Dron Orbital y Botiquines).
-- **M:** Silenciar / Activar efectos de sonido.
-- **F5 / Esc:** Guardar partida / Menú de Pausa (incluye guardado en SQL Server).
+| Entrada | Acción |
+|---|---|
+| WASD / Flechas | Movimiento |
+| Ratón | Apuntado |
+| Clic izquierdo / Espacio | Disparar |
+| Shift / Clic derecho | Impulso espectral |
+| Q | Onda prismática |
+| E | Activar portal |
+| H | Usar botiquín |
+| U / B | Abrir Armería Estelar |
+| M | Activar o silenciar sonido |
+| F5 | Guardar partida |
+| Esc | Pausa |
 
-## Cómo ejecutar
+## Requisitos y ejecución
 
-- **Opción rápida:** Haz doble clic en `COMPILAR_Y_EJECUTAR.bat` (requiere .NET 8 SDK Desktop).
-- **Visual Studio 2022:** Abre `NEXUS.sln` y presiona **F5** (Iniciar).
+- Windows 10/11.
+- Visual Studio 2022 con la carga de trabajo Desarrollo de escritorio de .NET, o .NET 8 SDK.
+- SQL Server / SQL Server Express si se desea utilizar la persistencia SQL.
+
+Abre NEXUS.sln en Visual Studio 2022, selecciona el proyecto NEXUS como inicio y ejecuta con F5. También puedes usar COMPILAR_Y_EJECUTAR.bat.
+
+## Persistencia SQL Server
+
+1. Abre NEXUS/SQL/CrearBaseNEXUS.sql en SQL Server Management Studio y ejecútalo.
+2. Comprueba que se hayan creado las tablas Perfiles, Misiones, Partidas, ProgresoMisiones y MejorasPartida.
+3. Si tu instancia SQL Server es distinta, configura la variable de entorno NEXUS_SQL_CONNECTION con tu cadena de conexión. El código incluye una cadena predeterminada que puede requerir adaptación al nombre de instancia de tu equipo.
+
+La persistencia guarda perfiles y partidas, y registra el progreso de las cuatro misiones y las mejoras de la Armería. El guardado local JSON también se conserva.
+
+## Estructura principal
+
+NEXUS-COMP/
+├── ConsoleApp1/
+├── NEXUS/
+│   ├── Assets/ (Audio, Planets, UI)
+│   ├── SQL/
+│   ├── GameEngine.cs
+│   ├── MainForm.cs
+│   ├── Program.cs
+│   ├── SoundFX.cs
+│   ├── SqlSaveRepository.cs
+│   └── NEXUS.csproj
+├── Docs/
+├── NEXUS.sln
+├── NEXUS V2.slnx
+└── README.md
+
+Consulta Docs/ para la documentación del proyecto y CORRECCIONES.md para el registro de correcciones conocidas.
