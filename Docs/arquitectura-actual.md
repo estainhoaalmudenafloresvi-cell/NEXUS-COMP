@@ -1,275 +1,174 @@
-# Arquitectura actual de NEXUS (H3)
+# Arquitectura actual de NEXUS
 
 ## 1. Objetivo
 
-Este documento describe la arquitectura de la versión actual de NEXUS, desarrollada en C#. Se identifican sus clases principales, las funcionalidades implementadas, el flujo de ejecución y las limitaciones detectadas en el código.
+Este documento describe las dos etapas presentes en el repositorio: el proyecto original de consola H3 y la versión gráfica actual. La finalidad es explicar cómo se pasó de la estructura inicial a una aplicación Windows Forms y qué responsabilidades tiene cada parte.
+
+## 2. Versiones y tecnologías
+
+### Proyecto original H3
+
+El proyecto ConsoleApp1 conserva el videojuego de consola desarrollado en C#. Su manual técnico describe las clases del cadete, personajes, mapa y sistema de juego, así como el guardado JSON.
+
+### Versión gráfica actual
+
+El proyecto NEXUS utiliza:
+- C# y .NET 8 para Windows.
+- Windows Forms para la ventana principal y los diálogos.
+- Dibujo 2D mediante System.Drawing.
+- Microsoft.Data.SqlClient para conectar con SQL Server.
+- System.Text.Json para el guardado local y para serializar el inventario dentro del registro SQL.
+- Archivos PNG y WAV dentro de NEXUS/Assets.
+
+La solución principal es NEXUS.sln y el proyecto gráfico se encuentra en NEXUS/NEXUS.csproj.
 
-El propósito es establecer una base técnica verificable para planificar la evolución del videojuego, sin confundir las funciones existentes con las que todavía se deben desarrollar.
+## 3. Organización de la versión gráfica
 
-## 2. Tecnologías y estructura general
+### 3.1. Program
 
-La versión actual de NEXUS es un videojuego de exploración por consola.
+Program contiene el punto de entrada Main. Inicializa la configuración de Windows Forms y abre MainForm.
 
-- **Lenguaje de programación:** C#.
-- **Interfaz:** consola de Windows.
-- **Paradigma:** programación orientada a objetos.
-- **Representación del escenario:** matriz bidimensional de cadenas de texto.
-- **Persistencia:** archivo JSON mediante `System.Text.Json`.
-- **Archivo de guardado:** `partida_nexus.json`.
-- **Espacio de nombres:** `ProyectoNexus`.
+### 3.2. MainForm
 
-El código utiliza las bibliotecas `System`, `System.Collections.Generic`, `System.IO`, `System.Text.Json` y `System.Threading` para gestionar operaciones básicas, colecciones, archivos, serialización y pausas durante la ejecución.
+MainForm es la ventana principal y coordina la interacción con la jugadora. Crea los controles de la interfaz mediante código, administra los temporizadores y conecta los eventos de teclado y ratón con el motor del juego.
 
-La aplicación no utiliza actualmente Windows Forms ni SQL Server. La interacción se realiza mediante texto, colores, símbolos, menús numéricos y controles por teclado.
+Responsabilidades principales:
+- Construir el menú principal y el selector de planeta.
+- Solicitar el nombre de la exploradora.
+- Iniciar o cargar una partida local.
+- Crear el área de juego y dibujar el escenario, el HUD y el radar.
+- Interpretar el teclado y el ratón.
+- Mostrar pausa y Armería.
+- Guardar localmente y solicitar operaciones SQL.
+- Mostrar mensajes de resultado y errores.
 
-## 3. Clases principales
+La ventana utiliza un temporizador de juego de 16 milisegundos para actualizar el estado y refrescar el dibujo. También usa un temporizador separado para la animación del menú.
 
-### 3.1. `Personaje`
+### 3.3. GameEngine
 
-Es una clase abstracta que establece los atributos comunes de los personajes y entidades del juego.
+GameEngine contiene las reglas y el estado dinámico del videojuego. No construye los botones ni administra directamente la ventana.
 
-**Atributos:**
-- `Nombre`: nombre de la entidad.
-- `Vida`: puntos de vida actuales.
-- `VidaMaxima`: límite de vida.
-- `AtaqueBase`: daño base del personaje.
+Entre sus responsabilidades están:
+- Crear una nueva partida y seleccionar la misión.
+- Preparar el escenario de cada planeta.
+- Actualizar movimiento, enemigos, objetos y objetivos.
+- Gestionar disparos y habilidades del juego.
+- Procesar la recolección y las interacciones.
+- Controlar la finalización o el fracaso de una misión.
+- Aplicar recompensas y mejoras.
+- Guardar y cargar el estado JSON.
 
-**Método principal:**
-- `AnalizarEntidad()`: método abstracto que las clases derivadas implementan para mostrar información sobre la entidad.
+Métodos públicos relevantes identificados en el código:
+- Nueva(string name)
+- SelectMission(int missionIndex)
+- StartMission()
+- SetAim(float dx, float dy)
+- Update(...)
+- Shoot()
+- Dash()
+- Pulse()
+- Interact()
+- UseMedkit()
+- Retry()
+- UpgradeWeapon()
+- UpgradeShield()
+- UpgradeThruster()
+- UpgradeDrone()
+- BuyMedkit()
+- Save(string path)
+- Load(string path)
+- LoadFromState(GameState state)
 
-Esta clase permite compartir propiedades y comportamientos comunes entre el cadete, los robots y los enemigos.
+### 3.4. GameState y clases auxiliares
 
-### 3.2. `Cadete`
+GameState almacena los datos persistentes de la exploradora: nombre, vida, energía, XP, nivel, misión, recursos, mejoras, misiones completadas e inventario.
 
-Hereda de `Personaje` y representa al jugador dentro del universo NEXUS.
+GameEngine utiliza además estructuras auxiliares para representar elementos del mundo:
+- Enemy y EnemyKind: entidades y tipos de enemigo.
+- Shot: proyectiles del juego.
+- Pickup: objetos recogibles.
+- LunarAltar: altares de la tercera expedición.
+- Particle, FloatingText y GhostTrail: efectos visuales.
 
-**Atributos adicionales:**
-- `Edad`
-- `NivelEnergia`
-- `EstabilidadConexion`
-- `RiesgoRadiacion`
-- `ExperienciaXP`
-- `PosX`
-- `PosY`
-- `Inventario`
+Estas clases separan los datos de los objetos del escenario de la lógica general del motor.
 
-El constructor inicializa la vida en 100 puntos, el ataque base en 25, la radiación en 10 y agrega tres objetos iniciales al inventario: una célula de energía, un escudo nano-protector y un analizador cuántico.
+### 3.5. SqlSaveRepository
 
-**Métodos y comportamientos implementados:**
+SqlSaveRepository concentra las operaciones de persistencia en SQL Server. Utiliza SqlConnection, SqlCommand, parámetros tipados y SqlDataReader.
 
-- `PuedeDespegar()`: comprueba que la edad sea igual o superior a 18 y que la energía sea mayor que 20.
-- `ModificarEnergia(int delta)`: modifica la energía y limita su valor al intervalo de 0 a 100.
-- `ModificarConexion(int delta)`: modifica la estabilidad de conexión dentro del mismo intervalo.
-- `AumentarRadiacion(int delta)`: actualiza el riesgo de radiación con límites de 0 a 100.
-- `EscanearIris()`: consume 10 puntos de energía y aumenta la radiación en 15.
-- `Recargar()`: restaura la energía al 100 %, respetando el límite establecido.
-- `EvaluarAnomaliaCritica()`: comprueba si la vida o la energía han llegado a cero.
-- `EjecutarDesconexionEmergencia(string motivo)`: presenta una secuencia de desconexión en la consola.
-- `AnalizarEntidad()`: muestra información del estado del cadete.
+Sus operaciones principales son:
+- ProbarConexion()
+- ListarPerfiles()
+- CrearPerfil(string nombre)
+- ObtenerOCrearPerfil(string nombre)
+- EliminarPerfil(int idPerfil)
+- Guardar(GameState state)
+- GuardarPartida(int idPerfil, GameState state)
+- ListarPartidas(int idPerfil)
+- CargarPartida(int idPartida)
+- ListarPartidas()
+- CargarUltima()
+- EliminarPartida(int idPartida)
 
-La clase concentra buena parte de las variables que describen el estado del jugador y algunas de las reglas relacionadas con sus recursos.
+Al guardar una partida, el repositorio utiliza una transacción para registrar la partida, el progreso de las cuatro misiones y los niveles de las mejoras. Si ocurre un error, revierte la transacción.
 
-### 3.3. `Robot`
+### 3.6. SoundFX
 
-Hereda de `Personaje` y representa un robot de defensa.
+SoundFX administra los sonidos asociados al juego y a los planetas. La clase mantiene las operaciones de audio separadas de la interfaz y del motor.
 
-Su constructor recibe un modelo y establece un nombre con el prefijo `Robot Sentinel-`. También configura 65 puntos de vida y 10 puntos de ataque.
+## 4. Persistencia actual
 
-El método `AnalizarEntidad()` muestra información sobre el sistema defensivo y su blindaje.
+### Guardado local JSON
 
-### 3.4. `Enemigo`
+MainForm guarda el archivo expedicion.json dentro de la carpeta local de datos de la aplicación del usuario. El juego permite guardar con F5 y desde la pausa. También realiza un autoguardado periódico. GameEngine utiliza System.Text.Json para serializar GameState.
 
-También hereda de `Personaje` y representa una entidad hostil.
+### SQL Server
 
-**Atributo adicional:**
-- `TipoAnomalia`: identifica la clase o naturaleza de la anomalía.
+El script NEXUS/SQL/CrearBaseNEXUS.sql crea la base NEXUS y cinco tablas:
+- Perfiles
+- Misiones
+- Partidas
+- ProgresoMisiones
+- MejorasPartida
 
-Su constructor permite establecer el nombre, el tipo de anomalía, la vida y el ataque. Su método `AnalizarEntidad()` muestra información de la entidad detectada.
+La conexión se obtiene de la variable de entorno NEXUS_SQL_CONNECTION o de una cadena predeterminada en SqlSaveRepository. Esa cadena predeterminada puede requerir ajuste según la instancia SQL Server de cada equipo.
 
-### 3.5. `Mapa`
+El guardado SQL se inicia desde la pausa. La opción Archivo y Base de Datos SQL permite intentar cargar la partida más reciente. El inventario se serializa en InventarioJson dentro de Partidas.
 
-Administra la representación del terreno de exploración.
+## 5. Flujo de ejecución
 
-**Atributos y propiedades:**
-- `NombreRealidad`: nombre del escenario.
-- `matrizTerreno`: matriz privada de cadenas que contiene las casillas.
-- `Filas`: cantidad de filas de la matriz.
-- `Columnas`: cantidad de columnas de la matriz.
+1. Program inicializa Windows Forms y crea MainForm.
+2. MainForm construye el menú principal.
+3. La jugadora inicia una expedición o selecciona un planeta.
+4. GameEngine prepara el escenario y el estado inicial.
+5. El temporizador de MainForm llama periódicamente a GameEngine.Update.
+6. Los eventos de teclado y ratón transmiten las acciones de la jugadora al motor.
+7. MainForm dibuja el estado actualizado en el área de juego.
+8. El juego guarda localmente de forma periódica y bajo petición.
+9. Si la jugadora lo solicita, SqlSaveRepository guarda o recupera datos de SQL Server.
 
-**Métodos principales:**
-- `ObtenerCasilla(int f, int c)`: devuelve el contenido de una casilla.
-- `LimpiarCasilla(int f, int c)`: reemplaza una casilla por un símbolo de terreno vacío.
-- `Renderizar(int jugadorX, int jugadorY)`: muestra el mapa en la consola, representa al jugador con `@` y aplica colores según el contenido de cada casilla.
+## 6. Relación con H3
 
-El mapa se representa mediante símbolos de texto. Entre ellos se encuentran `@` para el jugador, `◆` para el núcleo u objeto, `⚠` y `●` para elementos que activan encuentros, y `⌂` para las zonas de extracción.
+El proyecto de consola se conserva en ConsoleApp1. La versión gráfica mantiene la idea de exploración, personaje, recursos, encuentros y progreso, pero su implementación actual utiliza GameState y GameEngine como estructura principal.
 
-### 3.6. `SistemaNexus`
+No se debe afirmar que las clases antiguas de H3 se usan directamente en la versión gráfica si no están referenciadas desde el proyecto NEXUS. La relación entre ambas versiones es principalmente evolutiva y conceptual, además de conservar el código original en el repositorio.
 
-Es la clase que coordina el funcionamiento general del videojuego.
+## 7. Limitaciones observadas
 
-**Atributos principales:**
-- `cadete`: referencia al jugador actual.
-- `mapaActual`: escenario en el que se encuentra.
-- `mapaRealidades`: diccionario que almacena los mapas disponibles.
-- `jugando`: controla el bucle principal.
-- `nucleoEncontrado`: indica si se ha recuperado el núcleo.
-- `random`: permite seleccionar aleatoriamente el tipo de entidad durante un encuentro.
-- `ArchivoGuardado`: constante con el nombre `partida_nexus.json`.
+- La conexión SQL depende de que exista una instancia disponible y de que la cadena de conexión sea correcta.
+- El guardado SQL se realiza desde una acción de la interfaz; el autoguardado periódico corresponde al archivo JSON local.
+- La interfaz no contiene una pantalla independiente para administrar el inventario, aunque el estado y la persistencia sí conservan la lista de objetos.
+- El archivo Manual_Tecnico_NEXUS_H3.md documenta la versión original de consola y debe leerse como referencia histórica, no como descripción de la interfaz gráfica actual.
+- La presencia del script SQL no demuestra por sí sola que la base esté instalada en todos los equipos; debe ejecutarse y probarse en cada instancia.
 
-**Métodos y responsabilidades identificados:**
+## 8. Archivos principales
 
-- `SistemaNexus()`: inicializa el estado del juego y carga las realidades disponibles.
-- `CargarRealidades()`: registra el mapa `A-01`, denominado «Realidad Alfa-01».
-- `Iniciar()`: presenta el inicio del juego, ofrece cargar una partida o registrar un nuevo cadete y comprueba los requisitos para comenzar.
-- `BuclePrincipal()`: muestra el menú principal y dirige las acciones seleccionadas.
-- `ExplorarZona()`: gestiona el movimiento del cadete por el mapa.
-- `ProcesarEventoCasilla(int x, int y)`: procesa los objetos, encuentros y zonas de extracción.
-- `IniciarEncuentroEntidad(Personaje entidad)`: gestiona las opciones de combate.
-- `AdministrarInventario()`: muestra los objetos y permite utilizarlos.
-- `GuardarPartida()`: serializa el cadete en un archivo JSON.
-- `CargarPartida()`: recupera el cadete desde el archivo JSON.
-- `MostrarBanner()`: presenta el título del videojuego.
-- `MostrarEstadoCadete()`: muestra los indicadores principales del jugador.
-- `LeerEntero(string msg)`: solicita valores enteros y vuelve a pedirlos si la entrada no es numérica.
-
-Esta clase concentra la mayor parte de la coordinación entre el menú, la exploración, los encuentros, el inventario y la persistencia.
-
-### 3.7. `Program`
-
-Contiene el método `Main()`, punto de entrada de la aplicación.
-
-Su funcionamiento consiste en establecer el título de la consola, crear una instancia de `SistemaNexus` y ejecutar su método `Iniciar()`.
-
-## 4. Flujo de ejecución actual
-
-El funcionamiento general de NEXUS sigue esta secuencia:
-
-1. Se ejecuta `Main()` y se crea una instancia de `SistemaNexus`.
-2. El constructor carga la definición del mapa disponible.
-3. `Iniciar()` muestra el banner y comprueba si existe `partida_nexus.json`.
-4. Si el jugador decide no cargar una partida, se solicitan su nombre, edad, energía inicial y conexión cuántica.
-5. Se comprueban los requisitos para iniciar la exploración.
-6. Se presenta el menú principal con las opciones de explorar, escanear, consultar datos, recargar, administrar el inventario, guardar y abortar.
-7. Durante la exploración, el jugador se desplaza por el mapa con las teclas W, A, S y D.
-8. Cada movimiento válido consume dos puntos de energía y procesa la casilla correspondiente.
-9. Si encuentra una entidad, puede atacarla, escapar, utilizar un objeto o analizarla.
-10. Al recuperar el núcleo energético y regresar a una casilla de extracción, se completa la misión.
-11. El sistema comprueba las condiciones de desconexión de emergencia y finaliza el bucle cuando corresponde.
-
-## 5. Funcionalidades implementadas
-
-### 5.1. Registro e inicio del cadete
-
-El juego solicita los datos iniciales del jugador y verifica los requisitos de edad y energía mediante `PuedeDespegar()`.
-
-El método `LeerEntero()` comprueba que los datos numéricos sean válidos como enteros, aunque no verifica que todos estén dentro de un intervalo permitido.
-
-### 5.2. Exploración
-
-El escenario inicial tiene cinco filas y seis columnas. El jugador puede moverse mediante W, A, S y D, regresar al menú con Q y visualizar su posición en el mapa.
-
-El código impide desplazarse fuera de los límites del escenario.
-
-### 5.3. Administración de recursos
-
-El sistema gestiona la vida, la energía, la estabilidad de conexión, la radiación y la experiencia. El escáner consume energía y aumenta la radiación; la recarga restablece la energía al 100 %.
-
-La desconexión de emergencia se activa cuando se detecta que la vida o la energía han llegado a cero en los puntos donde se evalúa esa condición.
-
-### 5.4. Inventario
-
-El inventario se representa mediante una `List<string>`.
-
-Los objetos iniciales son:
-- Célula de energía: restaura 30 puntos de energía.
-- Escudo nano-protector: restaura hasta 25 puntos de vida sin superar la vida máxima.
-- Analizador cuántico: actualmente no tiene un efecto específico implementado al utilizarlo; se muestra un mensaje genérico.
-
-Al seleccionar un objeto, este se elimina de la lista antes de aplicar su efecto. Por ello, el comportamiento actual no permite conservar un objeto después de usarlo.
-
-### 5.5. Combate
-
-Los encuentros pueden involucrar un robot de defensa o un enemigo de tipo anomalía.
-
-El jugador dispone de cuatro acciones: atacar, escapar, utilizar un objeto o analizar la entidad. Un ataque reduce la vida del enemigo y, si este continúa con vida, responde con un ataque contra el cadete.
-
-Al neutralizar una entidad se otorgan 30 puntos de experiencia.
-
-### 5.6. Misión principal
-
-La misión implementada se denomina **«La anomalía perdida»**.
-
-Sus objetivos mostrados en el menú son:
-1. Encontrar el núcleo energético.
-2. Sobrevivir a las entidades.
-3. Regresar al punto de extracción.
-
-Cuando el jugador encuentra un núcleo, este se agrega al inventario, se activa el indicador `nucleoEncontrado` y la casilla se limpia.
-
-La misión termina cuando el jugador llega a una casilla de extracción después de encontrar el núcleo. La recompensa es de 100 puntos de experiencia y un objeto denominado módulo desconocido: rifle de plasma.
-
-Aunque el menú menciona sobrevivir a las entidades, la condición de finalización no exige derrotarlas todas.
-
-### 5.7. Guardado y carga
-
-El método `GuardarPartida()` serializa el objeto `Cadete` en `partida_nexus.json` mediante `JsonSerializer`.
-
-El método `CargarPartida()` lee ese archivo, reconstruye el objeto `Cadete` y selecciona nuevamente el mapa `A-01`.
-
-Este mecanismo permite recuperar los atributos serializados del cadete, pero no guarda el estado completo de la partida.
-
-## 6. Limitaciones técnicas detectadas
-
-### 6.1. Dependencia de la consola
-
-La presentación, la entrada de datos y los mensajes dependen directamente de `Console`. Esto limita la posibilidad de construir una interfaz gráfica sin reorganizar las responsabilidades del código.
-
-### 6.2. Concentración de responsabilidades
-
-`SistemaNexus` administra muchas funciones diferentes: menú, exploración, eventos, combate, inventario y guardado. Esta concentración puede dificultar las pruebas y la incorporación de nuevas misiones.
-
-### 6.3. Persistencia incompleta
-
-El guardado serializa el cadete, pero no conserva explícitamente:
-- El valor de `nucleoEncontrado`.
-- El estado modificado del mapa.
-- El progreso detallado de la misión.
-- El estado de los encuentros.
-
-Al cargar, se vuelve a seleccionar el mapa `A-01`, mientras que `nucleoEncontrado` comienza con su valor inicial `false`. Por lo tanto, una partida guardada después de recoger el núcleo no necesariamente puede reanudarse desde el mismo estado de la misión.
-
-### 6.4. Escape del combate
-
-La opción de escapar muestra el mensaje de que el cadete llegó a una casilla segura y termina el encuentro. Sin embargo, no modifica `PosX` ni `PosY`; el desplazamiento a una casilla segura no está implementado.
-
-### 6.5. Validación de datos iniciales
-
-`LeerEntero()` verifica que la entrada sea numérica, pero no impide introducir valores negativos o valores superiores a 100 para la energía y la conexión iniciales.
-
-Además, el mensaje de inicio indica que se debe ser «mayor de 18 años», mientras que la condición real `Edad >= 18` acepta también a quien tiene exactamente 18 años.
-
-### 6.6. Consumo de energía durante la exploración
-
-La energía se reduce en dos puntos después de comprobar los límites del mapa. Sin embargo, una tecla distinta de W, A, S, D o Q puede dejar la posición sin cambios y aun así continuar por el flujo de movimiento, consumiendo energía y procesando la casilla actual.
-
-### 6.7. Gestión del estado del juego
-
-La misión está controlada mediante una variable booleana y lógica concentrada en `SistemaNexus`. No existe todavía un sistema general de misiones que permita administrar estados, objetivos y recompensas diferenciados para varias misiones.
-
-### 6.8. Alcance limitado del contenido
-
-La implementación identificada dispone de un mapa inicial y una misión principal. Las misiones adicionales, la interfaz gráfica y la persistencia mediante SQL Server todavía deben desarrollarse.
-
-## 7. Conclusión
-
-NEXUS H3 cuenta con una base funcional de programación orientada a objetos, exploración por mapa, administración de recursos, inventario, encuentros y una misión principal. También incorpora una primera solución de persistencia basada en JSON.
-
-Las limitaciones principales se encuentran en la concentración de responsabilidades dentro de `SistemaNexus`, la dependencia directa de la consola y el guardado incompleto del estado de la misión.
-
-La evolución técnica deberá conservar las mecánicas útiles, corregir los comportamientos inconsistentes y separar progresivamente la interfaz, la lógica del juego y el acceso a datos. De esta manera, se podrá incorporar una interfaz gráfica y guardar el progreso de forma más completa sin perder la base desarrollada en H3.
-
-## 8. Base de verificación
-
-Este documento se elaboró a partir del código C# de NEXUS H3 compartido durante el proyecto, junto con la descripción técnica disponible. Las funcionalidades indicadas como implementadas corresponden a los métodos y comportamientos identificados en ese material; no se afirma que se hayan probado de forma independiente en un entorno de ejecución.
-
-Antes de la entrega, se recomienda comparar este documento con la versión definitiva del repositorio para confirmar que el código no haya cambiado.
+| Archivo | Responsabilidad |
+|---|---|
+| NEXUS/Program.cs | Inicio de Windows Forms |
+| NEXUS/MainForm.cs | Interfaz, eventos, temporizadores y dibujo |
+| NEXUS/GameEngine.cs | Reglas y estado del juego |
+| NEXUS/SqlSaveRepository.cs | Acceso a SQL Server |
+| NEXUS/SoundFX.cs | Audio |
+| NEXUS/SQL/CrearBaseNEXUS.sql | Creación del esquema SQL |
+| ConsoleApp1/Program.cs | Versión original de consola |

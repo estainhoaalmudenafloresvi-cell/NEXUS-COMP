@@ -1,96 +1,102 @@
-# Modelo de datos propuesto de NEXUS
+# Modelo de datos de NEXUS
 
 ## 1. Objetivo
 
-El objetivo es diseñar una base de datos para guardar y recuperar el progreso del jugador en NEXUS. Se utilizará SQL Server para conservar la información de las partidas y permitir que el jugador continúe donde se quedó.
+Este documento describe el modelo utilizado por el script SQL actual de NEXUS. La base de datos permite registrar perfiles, partidas, misiones, progreso y mejoras para recuperar el avance de la exploradora.
 
-## 2. Información que guardará el sistema
+## 2. Tablas existentes
 
-### 2.1. Jugador
+El archivo NEXUS/SQL/CrearBaseNEXUS.sql crea cinco tablas.
 
-Guardará los datos básicos del jugador.
+### 2.1. Perfiles
 
-- Nombre del cadete.
-- Edad del cadete.
+Almacena el nombre de cada exploradora y la fecha en que se creó el perfil. Un perfil puede tener varias partidas guardadas.
 
-### 2.2. Partida
+### 2.2. Misiones
 
-Almacenará el estado actual de la partida.
+Contiene el catálogo de las cuatro expediciones. El script registra:
+1. EOS — Jardín de Cristal.
+2. NÉBULA — Archivo Sumergido.
+3. SYLVARA — Santuario de las Lunas.
+4. ASTRALIS — Corazón del Vacío.
 
-- Vida actual del cadete.
-- Energía disponible.
-- Posición del cadete en el mapa.
+### 2.3. Partidas
+
+Guarda el estado principal de una partida:
+- Perfil al que pertenece.
 - Misión actual.
-- Fecha y hora del último guardado.
+- Nivel y experiencia.
+- Vida y energía actuales y máximas.
+- Créditos y botiquines.
+- Eliminaciones y mejor racha.
+- Fragmentos y núcleos.
+- Inventario serializado como JSON.
+- Fecha y hora del guardado.
 
-### 2.3. Inventario
+El inventario no tiene una tabla independiente en el esquema actual. Sus elementos se guardan en el campo InventarioJson de Partidas.
 
-Guardará los objetos que posee el jugador.
+### 2.4. ProgresoMisiones
 
-- Nombre de cada objeto.
-- Cantidad disponible.
+Registra si cada misión está completada dentro de una partida. De esta forma, el juego puede conservar el avance de las cuatro expediciones.
 
-### 2.4. Misiones
+### 2.5. MejorasPartida
 
-Contendrá la información de las misiones principales del videojuego.
+Almacena el nivel de las mejoras compradas para una partida:
+- Arma.
+- Escudo.
+- Propulsor.
+- Dron.
 
-- Nombre de la misión.
-- Descripción de la misión.
+## 3. Relaciones entre los datos
 
-Las cuatro misiones propuestas son:
+- Un perfil puede tener varias partidas.
+- Cada partida corresponde a un perfil y tiene una misión actual.
+- Una partida registra el estado de varias misiones en ProgresoMisiones.
+- El catálogo Misiones se utiliza tanto para identificar la misión actual como para registrar el progreso.
+- Una partida puede tener varios registros de mejoras.
 
-1. La anomalía perdida.
-2. Señal en la oscuridad.
-3. El guardián de NEXUS.
-4. El origen de la brecha.
+## 4. Diagrama del modelo
 
-La primera misión ya está desarrollada en la versión actual. Las otras tres se añadirán durante las siguientes etapas del proyecto.
-
-### 2.5. Progreso de las misiones
-
-Permitirá conocer el avance del jugador en cada misión.
-
-- Nombre de la misión.
-- Estado de la misión: pendiente, en curso o completada.
-
-## 3. Organización de la información
-
-La información se organizará en diferentes tablas para que sea más fácil consultarla y actualizarla.
-
-Cada partida tendrá información sobre el jugador, su inventario y el progreso de las misiones. De esta manera, el sistema podrá recuperar los datos necesarios para continuar el juego.
-
-## 4. Diagrama del modelo de datos
-
-```mermaid id="nexusdatos2"
+\`\`\`mermaid
 erDiagram
-    JUGADOR ||--o{ PARTIDA : tiene
-    PARTIDA ||--o{ INVENTARIO : contiene
-    PARTIDA ||--o{ PROGRESO_MISION : registra
-    MISION ||--o{ PROGRESO_MISION : incluye
-```
+    PERFILES ||--o{ PARTIDAS : guarda
+    MISIONES ||--o{ PARTIDAS : identifica
+    PARTIDAS ||--o{ PROGRESO_MISIONES : registra
+    MISIONES ||--o{ PROGRESO_MISIONES : aparece_en
+    PARTIDAS ||--o{ MEJORAS_PARTIDA : contiene
+\`\`\`
 
-## 5. Cómo se guardará una partida
+El inventario se representa dentro de Partidas mediante un campo JSON, por lo que no aparece como entidad independiente en este diagrama.
 
-Cuando el jugador seleccione la opción «Guardar partida», el sistema almacenará su información en SQL Server.
+## 5. Cómo se guarda una partida en SQL Server
 
-Se guardarán la vida, la energía, la posición en el mapa, los objetos del inventario y el progreso de las misiones.
+El repositorio SqlSaveRepository realiza las siguientes operaciones:
+1. Busca el perfil por nombre o lo crea si todavía no existe.
+2. Abre una conexión con SQL Server.
+3. Inicia una transacción.
+4. Inserta el estado principal en Partidas.
+5. Registra el estado de las cuatro misiones en ProgresoMisiones.
+6. Registra las mejoras de arma, escudo, propulsor y dron en MejorasPartida.
+7. Confirma la transacción.
 
-## 6. Cómo se recuperará una partida
+Si una operación falla, la transacción se revierte para evitar dejar una partida guardada de forma incompleta.
 
-Cuando el jugador seleccione «Cargar partida», el sistema recuperará la información almacenada en SQL Server.
+## 6. Cómo se recupera una partida
 
-De esta manera, podrá continuar desde el último guardado sin tener que comenzar una partida nueva.
+El repositorio consulta la partida seleccionada, recupera el perfil, reconstruye el estado principal y después carga el progreso de misiones y los niveles de mejoras. El inventario se reconstruye leyendo el JSON almacenado en Partidas.
 
-## 7. Relación con la versión actual
+La interfaz actual también ofrece la opción de cargar la última partida registrada en SQL Server.
 
-Actualmente, NEXUS utiliza el archivo `partida_nexus.json` para guardar algunos datos del cadete.
+## 7. Relación con el guardado local
 
-En la nueva versión se propone utilizar SQL Server para organizar y conservar más información, incluyendo el inventario y el progreso de las misiones.
+El juego conserva además un archivo JSON local en la carpeta de datos de la aplicación. Este mecanismo es independiente de SQL Server: el guardado local no necesita que SQL Server esté conectado.
 
-El cambio se realizará poco a poco, aprovechando el código que ya existe.
+## 8. Integridad y validaciones
 
-## 8. Consideraciones finales
+El script utiliza claves, restricciones y valores predeterminados para proteger la información. Entre las validaciones se encuentran límites para vida, energía, nivel, créditos, botiquines y mejoras, además de la comprobación de que InventarioJson contenga JSON válido.
 
-Este modelo es una propuesta inicial que se ajustará durante el desarrollo del proyecto.
+El script registra las cuatro misiones si todavía no existen y crea un índice para consultar las partidas de un perfil por fecha.
 
-Se realizarán pruebas para comprobar que la información pueda guardarse y recuperarse correctamente.
+## 9. Consideraciones y alcance
+
+Este documento refleja las cinco tablas del script actual. No se debe añadir una tabla de inventario o de objetos como si ya existiera. Si en una siguiente versión se decide separar los objetos en filas individuales, habrá que modificar el modelo, el script SQL y SqlSaveRepository de manera coordinada.

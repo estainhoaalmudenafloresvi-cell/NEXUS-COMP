@@ -1,89 +1,107 @@
-# Arquitectura propuesta de NEXUS
+# Arquitectura propuesta y evolución de NEXUS
 
 ## 1. Objetivo
 
-El objetivo es mejorar el videojuego NEXUS desarrollado en C#, pasando de una aplicación de consola a una aplicación con interfaz gráfica. También se propone utilizar SQL Server para guardar las partidas y permitir que el jugador continúe donde se quedó.
+La arquitectura de NEXUS debe mantener separadas la interfaz gráfica, las reglas del juego y la persistencia. La versión gráfica ya contiene una primera implementación de esta separación. Este documento describe esa estructura y las mejoras que pueden realizarse sin comenzar el proyecto desde cero.
 
-## 2. Tecnologías
+## 2. Tecnologías seleccionadas
 
-- **C#:** lenguaje utilizado para programar el juego.
-- **Windows Forms:** permitirá crear ventanas, botones y mostrar el mapa.
-- **SQL Server:** servirá para guardar las partidas y el progreso.
-- **GitHub:** permitirá almacenar y organizar el código del proyecto.
+- C# y .NET 8.
+- Windows Forms para la interfaz de escritorio.
+- System.Drawing para representar el escenario 2D.
+- SQL Server para almacenar perfiles y partidas.
+- Microsoft.Data.SqlClient para el acceso a datos.
+- System.Text.Json para el guardado local y la serialización del inventario.
 
-## 3. Partes principales del sistema
+## 3. Capas del sistema
 
-La nueva versión estará organizada en tres partes.
+### 3.1. Presentación — MainForm
 
-### 3.1. Interfaz gráfica
+Es la capa que recibe las acciones de la jugadora y muestra los resultados. Incluye el menú, el selector de planetas, el área de juego, el HUD, la pausa, la Armería y el Archivo.
 
-Será la parte que verá el jugador. Tendrá un menú principal, un mapa, el inventario y una pantalla para los combates.
+La interfaz no debería contener las reglas de los objetivos ni las operaciones SQL directamente. Debe delegar esas tareas en GameEngine y SqlSaveRepository.
 
-Se utilizarán ventanas y botones para que jugar sea más sencillo y visual.
+### 3.2. Lógica del juego — GameEngine
 
-### 3.2. Lógica del juego
+Controla el estado de la partida, las cuatro expediciones, los objetivos, los enemigos, los recursos, las habilidades y las mejoras.
 
-Será la encargada de controlar las reglas de NEXUS, como el movimiento, la vida, la energía, los enemigos y las misiones.
+GameState mantiene los datos de la exploradora que deben guardarse y recuperarse. Las clases auxiliares representan enemigos, objetos recogibles y elementos del escenario.
 
-Se aprovecharán las clases que ya existen en H3, como `Cadete`, `Personaje`, `Robot`, `Enemigo` y `Mapa`.
+### 3.3. Acceso a datos — SqlSaveRepository
 
-La clase `SistemaNexus` también se aprovechará, pero se podrá organizar mejor para que no tenga que controlar todo el juego por sí sola.
+Centraliza las consultas y modificaciones de SQL Server. Recibe o devuelve objetos GameState y evita que MainForm tenga que construir consultas SQL.
 
-### 3.3. Base de datos
+El repositorio utiliza parámetros para las consultas y una transacción al guardar una partida junto con el progreso de misiones y las mejoras.
 
-SQL Server permitirá guardar la información necesaria para continuar una partida.
+### 3.4. Almacenamiento
 
-Se guardarán datos como la vida y energía del cadete, su posición, el inventario y el progreso de las misiones.
-
-Para organizar las operaciones se podrán crear clases que permitan guardar y recuperar las partidas.
+Se mantienen dos mecanismos con propósitos distintos:
+- **JSON local:** permite guardar automáticamente una copia en el equipo.
+- **SQL Server:** permite guardar perfiles y partidas en tablas y recuperar la última partida registrada.
 
 ## 4. Diagrama de arquitectura
 
-El siguiente diagrama muestra cómo se comunicarán las partes del juego:
-
-```mermaid
+\`\`\`mermaid
 flowchart TD
-    A["Jugador"] --> B["Interfaz gráfica<br/>Windows Forms"]
-    B --> C["Lógica del juego<br/>C#"]
-    C --> D["Acceso a datos"]
-    D --> E[("SQL Server")]
-    C --> B
-```
+    U[Jugadora] --> UI[MainForm - Windows Forms]
+    UI --> GE[GameEngine]
+    GE --> GS[GameState]
+    UI --> SR[SqlSaveRepository]
+    GE --> JS[System.Text.Json - guardado local]
+    SR --> DB[(SQL Server)]
+    DB --> SR
+    SR --> UI
+    GE --> UI
+\`\`\`
 
-El jugador interactúa con la interfaz gráfica. La interfaz envía las acciones a la lógica del juego, que procesa los resultados. Cuando sea necesario guardar o cargar una partida, se utilizará SQL Server.
+## 5. Flujo de guardado y recuperación
 
-## 5. Relación con el código actual
+### Guardado local
 
-| Código actual | Mejora propuesta |
+1. MainForm solicita el guardado.
+2. GameEngine serializa GameState con System.Text.Json.
+3. El archivo se escribe en la carpeta local de datos de NEXUS.
+4. La interfaz informa si la operación tuvo éxito.
+
+### Guardado SQL
+
+1. MainForm solicita guardar el estado actual.
+2. SqlSaveRepository obtiene o crea el perfil.
+3. El repositorio abre una conexión y una transacción.
+4. Inserta la partida, el progreso de las cuatro misiones y las mejoras.
+5. Confirma la transacción; si ocurre un error, realiza rollback.
+6. MainForm muestra el resultado.
+
+### Recuperación SQL
+
+1. La interfaz solicita la última partida o una partida identificada.
+2. SqlSaveRepository consulta las tablas y reconstruye GameState.
+3. MainForm entrega el estado recuperado a GameEngine.
+4. El juego inicia con los datos cargados.
+
+## 6. Relación entre componentes
+
+| Componente | Responsabilidad |
 |---|---|
-| `Personaje` | Mantener la clase base de los personajes. |
-| `Cadete` | Conservar los datos y recursos del jugador. |
-| `Robot` y `Enemigo` | Seguir utilizándolos en los combates. |
-| `Mapa` | Adaptarlo para mostrar el escenario gráficamente. |
-| `SistemaNexus` | Organizar mejor las funciones del juego. |
-| `partida_nexus.json` | Pasar progresivamente el guardado a SQL Server. |
+| Program | Iniciar la aplicación |
+| MainForm | Presentación y eventos |
+| GameEngine | Reglas, objetivos y actualización del mundo |
+| GameState | Datos de la partida |
+| SqlSaveRepository | Operaciones de persistencia SQL |
+| SoundFX | Reproducción y control de sonido |
 
-## 6. Desarrollo por etapas
+## 7. Mejoras técnicas propuestas
 
-Para que el proyecto sea posible de realizar, se dividirá en etapas:
+Las siguientes mejoras son posibles etapas posteriores y no deben confundirse con funciones ya terminadas:
 
-1. Revisar y corregir los errores de la versión actual.
-2. Crear el menú y la pantalla del juego en Windows Forms.
-3. Conectar la interfaz con las clases existentes.
-4. Crear la base de datos y las funciones para guardar y cargar partidas.
-5. Añadir las tres misiones nuevas y probar que todo funcione.
+1. Añadir una pantalla independiente para consultar el inventario.
+2. Mejorar el selector de partidas SQL para elegir entre varias partidas guardadas.
+3. Centralizar la configuración de la cadena de conexión fuera del código fuente.
+4. Añadir pruebas automatizadas para el guardado, la carga y la progresión de misiones.
+5. Mostrar mensajes de error de conexión con instrucciones claras para configurar SQL Server.
 
-Primero se mejorará la misión que ya existe, «La anomalía perdida». Después se desarrollarán «Señal en la oscuridad», «El guardián de NEXUS» y «El origen de la brecha».
+## 8. Estado de implementación
 
-## 7. Justificación
+La separación principal ya está presente en el código: MainForm administra la interfaz, GameEngine administra las reglas y SqlSaveRepository administra SQL Server. El guardado local JSON también está implementado.
 
-Esta arquitectura permitirá mejorar NEXUS sin tener que programarlo todo desde cero. Se reutilizará el código que ya funciona y se añadirán las nuevas características poco a poco.
-
-Separar la interfaz, las reglas del juego y la base de datos hará que sea más fácil encontrar errores y realizar cambios en el futuro.
-
-## 8. Fuentes consultadas
-
-- Microsoft Learn. Documentación de Windows Forms: https://learn.microsoft.com/en-us/dotnet/desktop/winforms/
-- Microsoft Learn. Documentación de acceso a SQL Server desde .NET: https://learn.microsoft.com/en-us/sql/connect/ado-net/sql/
-
-Las tecnologías y la arquitectura descritas son propuestas para la futura versión de NEXUS. Todavía deben implementarse y probarse.
+La arquitectura propuesta no exige reemplazar estas clases. Se recomienda continuar mejorándolas de manera incremental y conservar la compatibilidad con el estado de partida existente.

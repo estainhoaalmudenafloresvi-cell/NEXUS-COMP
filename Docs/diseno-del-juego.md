@@ -1,47 +1,107 @@
-1. VISIÓN DEL JUEGO
-1.1. Concepto general
-NEXUS es un videojuego de ciencia ficción desarrollado en C# para ejecutarse en una consola de Windows. El jugador asume el papel de un cadete que debe explorar zonas desconocidas, investigar anomalías, administrar sus recursos y sobrevivir a los peligros de una realidad inestable.
+# Diseño del juego — NEXUS: Expedición Eos
 
-El juego combina exploración, combate, administración del inventario y cumplimiento de misiones. A medida que avanza, el jugador descubre información sobre los acontecimientos que provocaron las anomalías y el origen del problema que amenaza al universo de NEXUS.
+## 1. Visión del juego
 
-1.2. Género y estilo
-Género: aventura, exploración, ciencia ficción y supervivencia.
-Plataforma: PC con Windows.
-Lenguaje: C#.
-Interfaz: consola con texto, colores, símbolos y mapas representados mediante caracteres.
-Modo de juego: un jugador.
-Ambientación: instalaciones abandonadas, zonas contaminadas y territorios afectados por anomalías.
-1.3. Experiencia del jugador
-El jugador podrá explorar mapas, encontrar objetos, analizar entidades, combatir enemigos y completar misiones. Para avanzar deberá administrar su energía, vigilar su salud y controlar el riesgo de radiación.
+NEXUS es un videojuego de acción y exploración en 2D para PC con Windows. La jugadora controla a una exploradora espacial que debe completar cuatro expediciones en planetas distintos. Cada planeta presenta un objetivo, peligros y elementos propios.
 
-El sistema de progresión permitirá obtener experiencia, desbloquear recompensas y acceder a nuevas expediciones. Las decisiones durante la exploración y los encuentros con entidades influirán en los riesgos que deberá afrontar.
+El proyecto parte del videojuego de consola desarrollado en H3. La versión actual conserva la temática de exploración, los recursos del personaje, los enemigos y la progresión, y los presenta mediante una interfaz gráfica desarrollada en C# con Windows Forms.
 
-1.4. Misiones principales
-El juego contará con cuatro misiones principales que desarrollarán progresivamente la historia:
+**Género:** acción, exploración y ciencia ficción.  
+**Plataforma:** PC con Windows.  
+**Lenguaje:** C#.  
+**Interfaz actual:** Windows Forms, con dibujo 2D mediante gráficos de .NET.  
+**Modo:** un jugador.
 
-Misión 1: La anomalía perdida
+## 2. Objetivo y experiencia
 
-El cadete debe explorar una zona afectada por una anomalía, encontrar un núcleo de energía y regresar al punto de extracción. Durante la expedición deberá administrar sus recursos y enfrentarse a las entidades que encuentre. Esta misión se basa en la mecánica ya desarrollada en el código actual.
+El objetivo principal es completar las cuatro expediciones, reunir los recursos necesarios, superar los desafíos de cada planeta y activar el portal de salida. La experiencia combina desplazamiento, exploración del escenario, encuentros, recolección de objetos y mejora del equipo.
 
-Misión 2: Señal en la oscuridad
+La interfaz utiliza una paleta oscura con tonos violetas, rosados y cian. Los indicadores del HUD permiten consultar el estado de la exploradora y el objetivo activo.
 
-El jugador recibe una señal de emergencia procedente de una estación de investigación abandonada. Deberá explorar sus instalaciones, recuperar registros y descubrir qué ocurrió con el personal antes de encontrar una ruta de salida segura.
+## 3. Ciclo principal de juego
 
-Misión 3: El guardián de NEXUS
+1. **Preparación:** la jugadora inicia una expedición, introduce el nombre de la exploradora o selecciona un planeta.
+2. **Exploración:** recorre el escenario, evita obstáculos y localiza los objetivos.
+3. **Encuentros:** responde a las amenazas y utiliza las habilidades disponibles.
+4. **Recolección:** obtiene fragmentos, núcleos, créditos, energía o elementos de recuperación.
+5. **Progreso:** completa el objetivo del planeta y activa el portal.
+6. **Mejora:** utiliza los créditos en la Armería para mejorar el equipo.
+7. **Persistencia:** guarda el avance localmente o en SQL Server para continuar después.
 
-Una instalación importante se encuentra bloqueada por un robot de seguridad afectado por una anomalía. El jugador deberá investigar la zona, analizar al guardián y decidir cómo enfrentarlo para conseguir acceso a los datos protegidos.
+## 4. Las cuatro expediciones
 
-Misión 4: El origen de la brecha
+### 4.1. EOS — Jardín de Cristal
 
-En la misión final, el cadete deberá investigar una zona de alto riesgo para descubrir el origen de las anomalías. Tendrá que reunir información, administrar cuidadosamente sus recursos y alcanzar el objetivo de la expedición para completar la historia principal.
+La exploradora debe reunir tres Fragmentos Prismáticos dispersos por el escenario. Después de completar la recolección, debe acercarse al portal de extracción y activarlo. El planeta incluye centinelas de cristal y objetos de recuperación.
 
-Las misiones segunda, tercera y cuarta son propuestas de ampliación y todavía deberán implementarse en el código.
+### 4.2. NÉBULA — Archivo Sumergido
 
-1.5. Progresión y motivación
-La dificultad aumentará gradualmente entre las cuatro misiones. Cada expedición presentará nuevos objetivos, peligros y recompensas, motivando al jugador a mejorar sus estrategias y administrar mejor sus recursos.
+La exploradora debe recuperar cuatro Núcleos de Datos antes de que finalice la tormenta iónica. En el escenario aparecen estabilizadores que ayudan a mantener la expedición. El temporizador y los objetivos hacen que esta misión tenga presión de tiempo.
 
-La historia se revelará mediante registros, señales, encuentros y descubrimientos durante la exploración. De esta manera, el jugador tendrá motivos para continuar avanzando y descubrir el misterio detrás de NEXUS.
+### 4.3. SYLVARA — Santuario de las Lunas
 
-1.6. Objetivo del diseño
-El objetivo es convertir el proyecto actual en un videojuego de consola más completo, entretenido y coherente, conservando la base desarrollada en C#. Primero se consolidarán las mecánicas existentes y después se incorporarán las tres misiones nuevas, procurando que cada una tenga objetivos, desafíos y recompensas diferenciados.
+La exploradora debe sincronizar tres Altares Lunares permaneciendo dentro de sus círculos de energía. Cuando los tres altares están sincronizados, debe superar al Acechador Lunar para habilitar el portal.
 
+### 4.4. ASTRALIS — Corazón del Vacío
+
+La expedición final requiere desactivar dos Pilares de Escudo para dejar vulnerable al jefe del planeta. Después de superar el encuentro final, la exploradora puede activar el portal y completar la campaña.
+
+Las cuatro expediciones y sus objetivos están definidos en GameEngine. Los nombres, los objetivos y el orden se deben mantener sincronizados con la selección de planetas y con los registros de la tabla Misiones.
+
+## 5. Mecánicas y reglas
+
+### 5.1. Exploradora y estado de partida
+
+El estado principal se concentra en GameState. Incluye nombre, vida, energía, experiencia, nivel, misión actual, créditos, botiquines, eliminaciones, mejor racha, fragmentos, núcleos, mejoras y misiones completadas.
+
+### 5.2. Movimiento y escenario
+
+El escenario se representa en un mundo 2D de 2600 por 1700 unidades. La jugadora se desplaza con WASD o flechas. El ratón permite orientar el apuntado. El motor actualiza el movimiento, los encuentros y los elementos del escenario mediante un temporizador de Windows Forms.
+
+### 5.3. Habilidades e interacción
+
+- Shift o clic derecho: impulso.
+- Q: onda prismática.
+- E: interacción con elementos del escenario y activación del portal.
+- H: uso de botiquín.
+- U o B: acceso a la Armería.
+- Esc: pausa.
+- F5: guardado local.
+
+### 5.4. Recursos e inventario
+
+El estado de partida contempla vida, energía, botiquines, créditos, fragmentos, núcleos y una lista de objetos. Los objetos recogidos se gestionan desde la lógica del juego. En la persistencia SQL, la lista del inventario se serializa en el campo InventarioJson de Partidas.
+
+La versión actual no tiene una ventana independiente de inventario. Por eso, el boceto de inventario incluido en evidencias se identifica como una mejora de interfaz propuesta y no como una pantalla ya implementada.
+
+### 5.5. Progresión y mejoras
+
+Al completar una misión, el motor marca el planeta como completado, concede 85 créditos y un botiquín, restaura vida y energía y avanza a la siguiente expedición. La Armería permite mejorar el cañón, el blindaje, los propulsores y el dron, además de comprar botiquines.
+
+## 6. Navegación y pantallas
+
+La interfaz actual incluye:
+- Menú principal.
+- Diálogo de identidad de la exploradora.
+- Selector de planeta.
+- Pantalla de exploración con HUD y radar.
+- Pantalla de pausa.
+- Armería Estelar.
+- Archivo de exploradora y opciones de consulta/carga SQL.
+
+Los bocetos de cuatro pantallas requeridas por el trabajo están en [evidencias/bocetos-pantallas.md](evidencias/bocetos-pantallas.md). En ellos se diferencia lo que ya existe de la pantalla de inventario propuesta.
+
+## 7. Criterios de experiencia de usuario
+
+- **Legibilidad:** usar texto claro, tamaños adecuados y contraste entre fondo e indicadores.
+- **Jerarquía:** destacar el objetivo del planeta, la vida, la energía y las acciones principales.
+- **Consistencia:** mantener los mismos colores, nombres y estilos de botones.
+- **Navegación:** permitir regresar al menú, pausar y acceder a las opciones principales sin perder el estado.
+- **Retroalimentación:** informar cuando se recoge un objeto, se completa un objetivo, se compra una mejora o se guarda una partida.
+- **Accesibilidad básica:** ofrecer controles de teclado y ratón y mostrar las teclas principales en la documentación.
+
+## 8. Alcance y estado
+
+La versión gráfica actual contiene el menú, selector de planetas, exploración, HUD, pausa, Armería, archivo, cuatro expediciones, motor de juego y persistencia local y SQL.
+
+Quedan como posibles mejoras una pantalla independiente para consultar y administrar el inventario, una pantalla de selección de partidas SQL más completa y pruebas de integración automatizadas contra una instancia SQL Server. Estas mejoras no deben describirse como funcionalidades ya terminadas.

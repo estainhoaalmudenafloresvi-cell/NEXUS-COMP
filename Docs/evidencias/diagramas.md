@@ -1,144 +1,104 @@
-# Diagramas de diseño propuesto — NEXUS
+# Diagramas de NEXUS — versión gráfica
 
-## 1. Introducción
+## 1. Alcance
 
-Este documento presenta los diagramas iniciales para la evolución de NEXUS, tomando como base el videojuego desarrollado en H3.
+Estos diagramas representan el funcionamiento de la versión gráfica que se encuentra en el repositorio. Se basan en Program.cs, MainForm.cs, GameEngine.cs, SqlSaveRepository.cs y el script SQL.
 
-La propuesta busca transformar progresivamente el juego en una aplicación de escritorio desarrollada en C# con Windows Forms, manteniendo las mecánicas de exploración e interacción y considerando SQL Server para la persistencia de las partidas.
+## 2. Flujo principal
 
-Los siguientes diagramas representan un diseño propuesto, no funcionalidades que ya estén implementadas.
-
-## 2. Diagrama de flujo del juego
-
-El siguiente diagrama representa el recorrido básico del jugador desde el inicio hasta la exploración.
-
-```mermaid
+\`\`\`mermaid
 flowchart TD
-    A([Inicio]) --> B[Menú principal]
-    B --> C[Nueva partida]
-    C --> D[Entrar en una habitación]
-    D --> E[Explorar e interactuar]
-    E --> F{¿Qué desea hacer?}
-    F -->|Explorar| G[Cambiar de habitación]
-    G --> E
-    F -->|Inventario| H[Consultar objetos]
-    H --> E
-    F -->|Guardar| I[Guardar progreso]
-    I --> E
-    F -->|Salir| J([Fin])
-```
+    A[Iniciar aplicación] --> B[Menú principal]
+    B --> C[Nueva expedición]
+    B --> D[Continuar JSON local]
+    B --> E[Elegir planeta]
+    B --> F[Archivo y base SQL]
+    C --> G[Identidad de exploradora]
+    G --> H[GameEngine prepara misión]
+    D --> H
+    E --> H
+    H --> I[Exploración y objetivos]
+    I --> J{¿Objetivo cumplido?}
+    J -->|No| I
+    J -->|Sí| K[Recompensa y siguiente misión]
+    K --> I
+    I --> L[Pausa]
+    L --> M[Guardar JSON]
+    L --> N[Guardar SQL]
+    L --> O[Armería]
+    M --> I
+    N --> I
+    O --> I
+\`\`\`
 
-## 3. Diagrama del mapa de habitaciones
+## 3. Navegación de la interfaz
 
-El mapa representa una distribución sencilla de cinco habitaciones conectadas. El jugador podrá desplazarse entre las habitaciones que tengan una conexión.
-
-```mermaid
+\`\`\`mermaid
 flowchart TD
-    N[Habitación Norte] --- B[Base principal]
-    O[Habitación Oeste] --- B
-    B --- E[Habitación Este]
-    B --- S[Habitación Sur]
-```
-
-La base principal funciona como punto central del mapa. Las demás habitaciones pueden contener descripciones, objetos o interacciones, según las mecánicas que se definan para el juego.
-
-## 4. Diagrama de navegación entre pantallas
-
-Este diagrama muestra las principales pantallas previstas para la versión de escritorio.
-
-```mermaid
-flowchart TD
-    A[Menú principal] --> B[Nueva partida]
+    A[Menú principal] --> B[Nueva expedición]
     A --> C[Continuar partida]
-    A --> D[Configuración]
+    A --> D[Mapa estelar]
+    A --> E[Archivo y base SQL]
+    B --> F[Nombre de exploradora]
+    F --> G[Exploración]
+    C --> G
+    D --> G
+    G --> H[Pausa]
+    G --> I[Armería]
+    H --> I
+    H --> J[Guardar local]
+    H --> K[Guardar SQL]
+    I --> G
+    J --> G
+    K --> G
+    E --> L[Cargar última partida SQL]
+    L --> G
+\`\`\`
 
-    B --> E[Exploración]
-    C --> E
+## 4. Arquitectura implementada
 
-    E --> F[Inventario]
-    E --> G[Mapa]
-    E --> H[Guardar partida]
-
-    F --> E
-    G --> E
-    H --> E
-
-    D --> A
-```
-
-La interfaz propuesta permitirá acceder a las opciones principales mediante botones y regresar a la pantalla de exploración sin perder el estado de la partida.
-
-## 5. Diagrama de arquitectura propuesta
-
-La arquitectura separa la interfaz gráfica, la lógica del juego y el almacenamiento de datos.
-
-```mermaid
+\`\`\`mermaid
 flowchart TD
-    U[Jugador] <--> UI[Interfaz gráfica<br/>C# y Windows Forms]
-    UI <--> L[ Lógica del juego ]
-    L <--> D[Acceso a datos]
-    D <--> DB[(SQL Server)]
-```
+    P[Program] --> UI[MainForm - Windows Forms]
+    UI --> GE[GameEngine]
+    GE --> GS[GameState]
+    UI --> SR[SqlSaveRepository]
+    GE --> JSON[System.Text.Json]
+    SR --> SQL[(SQL Server)]
+    UI --> SFX[SoundFX]
+    GE --> SFX
+\`\`\`
 
-### Componentes
+## 5. Modelo de datos SQL actual
 
-- **Jugador:** utiliza las opciones de la aplicación.
-- **Interfaz gráfica:** presenta los menús, el mapa, el inventario y el estado del jugador.
-- **Lógica del juego:** controla el movimiento entre habitaciones, las interacciones y los recursos.
-- **Acceso a datos:** gestiona las operaciones de guardado y recuperación.
-- **SQL Server:** almacena la información persistente de las partidas.
-
-Esta arquitectura es una propuesta para las siguientes etapas y deberá adaptarse al código existente de H3.
-
-## 6. Modelo de datos inicial
-
-El siguiente modelo muestra una posible estructura para guardar jugadores, partidas y objetos del inventario.
-
-```mermaid
+\`\`\`mermaid
 erDiagram
-    JUGADOR ||--o{ PARTIDA : tiene
-    PARTIDA ||--o{ OBJETO_PARTIDA : contiene
+    PERFILES ||--o{ PARTIDAS : guarda
+    MISIONES ||--o{ PARTIDAS : identifica
+    PARTIDAS ||--o{ PROGRESO_MISIONES : registra
+    MISIONES ||--o{ PROGRESO_MISIONES : aparece_en
+    PARTIDAS ||--o{ MEJORAS_PARTIDA : contiene
+\`\`\`
 
-    JUGADOR {
-        int IdJugador PK
-        string Nombre
-    }
+El inventario se serializa en el campo InventarioJson de Partidas; no es una tabla independiente.
 
-    PARTIDA {
-        int IdPartida PK
-        int IdJugador FK
-        string HabitacionActual
-        int Salud
-        int Energia
-        datetime FechaGuardado
-    }
+## 6. Flujo de una operación de guardado SQL
 
-    OBJETO_PARTIDA {
-        int IdObjetoPartida PK
-        int IdPartida FK
-        string NombreObjeto
-        int Cantidad
-    }
-```
+\`\`\`mermaid
+flowchart TD
+    A[MainForm solicita guardar] --> B[SqlSaveRepository]
+    B --> C[Obtener o crear perfil]
+    C --> D[Abrir conexión y transacción]
+    D --> E[Insertar Partidas]
+    E --> F[Registrar ProgresoMisiones]
+    F --> G[Registrar MejorasPartida]
+    G --> H{¿Todas las operaciones correctas?}
+    H -->|Sí| I[Commit]
+    H -->|No| J[Rollback]
+    I --> K[Informar resultado]
+    J --> K
+\`\`\`
 
-Este modelo es preliminar. Los atributos y las relaciones deberán revisarse según las clases, las mecánicas y los datos que realmente utilice NEXUS.
+## 7. Relación con el proyecto H3
 
-## 7. Alcance de la propuesta
-
-Los diagramas establecen una guía inicial para el diseño y la implementación futura del videojuego.
-
-Las prioridades propuestas son:
-
-1. Diseñar el menú principal en Windows Forms.
-2. Crear una pantalla de exploración sencilla.
-3. Representar las habitaciones y permitir el desplazamiento entre ellas.
-4. Incorporar el inventario y el estado del jugador.
-5. Diseñar el guardado y la recuperación de partidas mediante SQL Server.
-
-La implementación deberá conservar la coherencia con el proyecto H3 y evitar introducir mecánicas que no correspondan al videojuego existente.
-
-## 8. Estado actual
-
-**Estado:** diseño propuesto.
-
-Los diagramas documentan una posible evolución de NEXUS. No implican que todas las pantallas, mecánicas o conexiones con SQL Server estén implementadas actualmente.
+ConsoleApp1 conserva el proyecto de consola original. NEXUS contiene la versión gráfica. Ambos forman parte de la historia del proyecto, pero la aplicación gráfica tiene su propio motor GameEngine y su estado GameState.
