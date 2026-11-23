@@ -152,7 +152,6 @@ El script crea cinco tablas: `Perfiles`, `Misiones`, `Partidas`, `ProgresoMision
 | [Modelo de datos](Docs/modelo-de-datos-propuesto.md) | Tablas y persistencia SQL |
 | [Análisis técnico](Docs/analisis-tecnico.md) | Alternativas y decisiones tecnológicas |
 | [Identidad visual](Docs/identidad-visual.md) | Paleta, recursos y estilo de NEXUS |
-| [Manual técnico H3](Docs/Manual_Tecnico_NEXUS_H3.md) | Referencia del proyecto original |
 | [Bocetos de pantallas](Docs/evidencias/bocetos-pantallas.md) | Esquemas de interfaz |
 | [Diagramas](Docs/evidencias/diagramas.md) | Arquitectura y procesos |
 | [Guía de evidencias](Docs/evidencias/README.md) | Capturas reales que faltan adjuntar |
@@ -166,7 +165,6 @@ El repositorio incluye GitHub Actions en `.github/workflows/validar-nexus.yml` p
 ```text
 NEXUS-COMP/
 ├── .github/workflows/
-├── ConsoleApp1/                 # Proyecto original H3
 ├── NEXUS/
 │   ├── Assets/
 │   │   ├── Audio/
