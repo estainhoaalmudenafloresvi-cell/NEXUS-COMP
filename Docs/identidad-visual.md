@@ -20,11 +20,7 @@ Los colores de esta guía se tomaron de los valores declarados en `MainForm.cs`.
 ### Muestra de la paleta
 
 <p align="center">
-  <img src="https://placehold.co/120x48/120B22/FAF1FF?text=INK" alt="Ink" />
-  <img src="https://placehold.co/120x48/2E1C48/FAF1FF?text=VIOLET" alt="Violet" />
-  <img src="https://placehold.co/120x48/CCB2F5/120B22?text=LAVENDER" alt="Lavender" />
-  <img src="https://placehold.co/120x48/FAB1DC/120B22?text=PINK" alt="Pink" />
-  <img src="https://placehold.co/120x48/85E4FF/120B22?text=CYAN" alt="Cyan" />
+  <img src="evidencias/paleta-nexus.svg" alt="Muestra visual de la paleta de colores NEXUS" width="760">
 </p>
 
 ## 3. Recursos gráficos del repositorio
