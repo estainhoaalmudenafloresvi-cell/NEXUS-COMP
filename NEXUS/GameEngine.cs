@@ -620,7 +620,7 @@ public sealed class GameEngine
             }
             else if (altar.Progress > 0f)
             {
-                altar.Progress = Math.Max(0f, altar.Progress - 4f * dt);
+                altar.Progress = Math.Max(0f, altar.Progress - 10f * dt);
             }
         }
 
