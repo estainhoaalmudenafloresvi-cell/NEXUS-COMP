@@ -854,33 +854,47 @@ public sealed class GameEngine
     {
         if (S.Vida >= S.MaxVida)
         {
-            Message = "Integridad del traje al 100%.";
-            messageClock = 1.6f;
+            Message = "Integridad del traje al 100%. No necesitas recuperación.";
+            messageClock = 2f;
             return;
         }
 
+        int vidaAnterior = S.Vida;
+        int vidaRecuperada;
+
         if (S.Botiquines > 0)
         {
+            vidaRecuperada = Math.Min(45, S.MaxVida - S.Vida);
+            S.Vida += vidaRecuperada;
             S.Botiquines--;
-            S.Vida = Math.Min(S.MaxVida, S.Vida + 45);
-            SpawnSparks(PlayerX, PlayerY, Color.LightGreen, 14, 150f);
-            AddFloatingText(PlayerX, PlayerY - 25, "+45 BOTIQUÍN", Color.LightGreen);
-            SoundFX.PlayPickup();
-            Message = $"Botiquín aplicado ({S.Botiquines} restantes).";
+
+            Message = $"Botiquín aplicado: +{vidaRecuperada} de vida. " +
+                      $"Botiquines restantes: {S.Botiquines}.";
         }
         else if (S.Creditos >= 20)
         {
+            vidaRecuperada = Math.Min(40, S.MaxVida - S.Vida);
+            S.Vida += vidaRecuperada;
             S.Creditos -= 20;
-            S.Vida = Math.Min(S.MaxVida, S.Vida + 40);
-            SpawnSparks(PlayerX, PlayerY, Color.LightGreen, 14, 150f);
-            AddFloatingText(PlayerX, PlayerY - 25, "+40 REPARACIÓN (-20 CR)", Color.LightGreen);
-            SoundFX.PlayPickup();
-            Message = "Reparación de emergencia aplicada (-20 CR).";
+
+            Message = $"Reparación aplicada: +{vidaRecuperada} de vida (-20 CR).";
         }
         else
         {
             Message = "Sin botiquines ni créditos suficientes (20 CR).";
+            messageClock = 2f;
+            return;
         }
+
+        SpawnSparks(PlayerX, PlayerY, Color.LightGreen, 14, 150f);
+        AddFloatingText(
+            PlayerX,
+            PlayerY - 25,
+            $"+{S.Vida - vidaAnterior} VIDA",
+            Color.LightGreen
+        );
+
+        SoundFX.PlayPickup();
         messageClock = 2f;
     }
 
